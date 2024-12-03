@@ -74,9 +74,16 @@ def receber_denuncia():
     anonymo = request.form['anonymo']
     nome = request.form.get('nome')
     rg = request.form.get('rg')
+    id_admin = 1  # Aqui sempre vai ser um como exemplo, mas no site real, poderia ser divido por regioes.
 
     # Inicia o cursor para o banco de dados
     cursor = mysql.connection.cursor()
+
+    # Obter o ID da visita atual
+    ip_visitante = request.remote_addr
+    cursor.execute("SELECT id FROM visitas WHERE ip = %s ORDER BY data_visita DESC LIMIT 1", (ip_visitante,))
+    visita = cursor.fetchone()
+    id_visita = visita[0] if visita else None  # Se não houver visita, será None
 
     if 'fotos[]' in request.files:
         fotos = request.files.getlist('fotos[]')
@@ -92,19 +99,18 @@ def receber_denuncia():
                 except Exception as e:
                     return f"Erro ao salvar a imagem: {str(e)}", 500  # Retorna o erro como resposta
 
-        # Concatenar os caminhos em uma única string, separada por virgulas
-        caminhos_imagens_str = ','.join(caminhos_imagens)
-
-        # Salvar a denúncia no banco de dados com os caminhos das imagens
+        # Concatenar os caminhos em uma única string, separada por vírgulas
         caminhos_imagens_str = ','.join(caminhos_imagens).replace('\\', '/')
+
+        # Salvar a denúncia no banco de dados com os caminhos das imagens, id_admin e id_visita
         cursor.execute(
-            "INSERT INTO denuncia (tipo_violacao, detalhes, localizacao, anonymo, nome, rg, imagem) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-            (tipo_violacao, detalhes, localizacao, anonymo, nome, rg, caminhos_imagens_str))
+            "INSERT INTO denuncia (tipo_violacao, detalhes, localizacao, anonymo, nome, rg, imagem, id_admin, id_visita) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            (tipo_violacao, detalhes, localizacao, anonymo, nome, rg, caminhos_imagens_str, id_admin, id_visita))
     else:
         # Caso não haja imagens, ainda assim insira a denúncia
         cursor.execute(
-            "INSERT INTO denuncia (tipo_violacao, detalhes, localizacao, anonymo, nome, rg, imagem) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-            (tipo_violacao, detalhes, localizacao, anonymo, nome, rg, None))  # Salvar None se não houver imagem
+            "INSERT INTO denuncia (tipo_violacao, detalhes, localizacao, anonymo, nome, rg, imagem, id_admin, id_visita) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            (tipo_violacao, detalhes, localizacao, anonymo, nome, rg, None, id_admin, id_visita))  # Salvar None se não houver imagem
 
     mysql.connection.commit()
     cursor.close()
@@ -119,7 +125,7 @@ def receber_denuncia():
 @app.route('/api/denuncias', methods=['GET'])
 def get_denuncias():
     cursor = mysql.connection.cursor()
-    cursor.execute("SELECT id_denuncia, localizacao, tipo_violacao, detalhes, nome, rg, imagem FROM denuncia")
+    cursor.execute("SELECT id_denuncia, localizacao, tipo_violacao, detalhes, nome, rg, imagem, id_admin, id_visita FROM denuncia")
     result = cursor.fetchall()
     cursor.close()
 
@@ -131,7 +137,9 @@ def get_denuncias():
         'detalhes': loc[3],
         'nome': loc[4] if loc[4] else 'Anônimo',  # Se o nome estiver vazio, exibe 'Anônimo'
         'rg': loc[5] if loc[5] else 'Não colocou RG',
-        'imagem': loc[6]
+        'imagem': loc[6],
+        'id_admin': loc[7],
+        'id_visita': loc[8]
     } for loc in result]
     
     return jsonify(denuncias)

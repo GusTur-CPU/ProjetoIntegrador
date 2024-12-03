@@ -32,7 +32,7 @@ function closeModal() {
 }
 
 // Função para adicionar marcadores ao mapa
-function addMarker(lat, lng, tipoViolacao, detalhes, nome, rg, imagens, id) {
+function addMarker(lat, lng, tipoViolacao, detalhes, nome, rg, imagens, id, id_admin, id_visita) {
     const imagensArray = imagens ? imagens.split(',') : []; // Divide a string de imagens em um array
 
     let imagensHTML = '';
@@ -52,6 +52,8 @@ function addMarker(lat, lng, tipoViolacao, detalhes, nome, rg, imagens, id) {
             <strong>Detalhes:</strong> ${detalhes}<br>
             <strong>Nome:</strong> ${nome}<br>
             <strong>RG:</strong> ${rg}<br>
+            <strong>Número do Admin Responsável:</strong> ${id_admin}<br>
+            <strong>ID Visitas:</strong> ${id_visita}<br>
             ${imagensHTML}
             ${deleteButton}
         `);
@@ -83,7 +85,7 @@ fetch('/api/denuncias')
         data.forEach(denuncia => {
             // Aqui você deve extrair a latitude e longitude da localização
             const [lat, lng] = denuncia.localizacao.split(',').map(Number);
-            addMarker(lat, lng, denuncia.tipo_violacao, denuncia.detalhes, denuncia.nome, denuncia.rg, denuncia.imagem, denuncia.id_denuncia);
+            addMarker(lat, lng, denuncia.tipo_violacao, denuncia.detalhes, denuncia.nome, denuncia.rg, denuncia.imagem, denuncia.id_denuncia, denuncia.id_admin, denuncia.id_visita);
         });
     })
     .catch(error => console.error('Erro ao carregar as denúncias:', error));
